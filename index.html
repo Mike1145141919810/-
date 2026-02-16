@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>班级随机点名系统</title>
+    <style>
+        :root {
+            --bg-1: #060a14;
+            --bg-2: #0a1220;
+            --card: rgba(255, 255, 255, 0.06);
+            --card-border: rgba(255, 255, 255, 0.14);
+            --text-main: #e9f0ff;
+            --text-sub: #8ea3c8;
+            --accent: #79a6ff;
+            --accent-2: #4d87ff;
+            --success: #52d6a2;
+            --danger: #ff6e8a;
+            --shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text-main);
+            background:
+                radial-gradient(900px 500px at 15% 20%, rgba(77, 135, 255, 0.2), transparent 60%),
+                radial-gradient(700px 450px at 80% 75%, rgba(121, 166, 255, 0.12), transparent 65%),
+                linear-gradient(135deg, var(--bg-1), var(--bg-2));
+            overflow: hidden;
+        }
+
+        .app {
+            min-height: 100%;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+        }
+
+        .panel {
+            width: min(980px, 96vw);
+            padding: clamp(20px, 4vw, 36px);
+            border-radius: 24px;
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            backdrop-filter: blur(12px);
+            box-shadow: var(--shadow);
+            display: grid;
+            gap: 22px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .title {
+            margin: 0;
+            font-size: clamp(1.3rem, 2vw, 1.8rem);
+            letter-spacing: 0.06em;
+            font-weight: 700;
+        }
+
+        .sub {
+            margin-top: 8px;
+            color: var(--text-sub);
+            font-size: 0.95rem;
+        }
+
+        .actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .count-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 42px;
+            padding: 0 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-sub);
+            font-size: 13px;
+        }
+
+        #pickCount {
+            width: 72px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            background: rgba(8, 14, 28, 0.85);
+            color: var(--text-main);
+            padding: 0 8px;
+            outline: none;
+            font-size: 14px;
+        }
+
+        button,
+        .file-btn {
+            border: 1px solid transparent;
+            border-radius: 12px;
+            height: 42px;
+            padding: 0 16px;
+            font-size: 14px;
+            cursor: pointer;
+            color: #f4f7ff;
+            background: rgba(255, 255, 255, 0.08);
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+
+        button:hover,
+        .file-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.45;
+            transform: none;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            border-color: rgba(121, 166, 255, 0.45);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .btn-stop {
+            border-color: rgba(255, 110, 138, 0.35);
+            background: rgba(255, 110, 138, 0.16);
+            color: #ffd9e1;
+            font-weight: 600;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .display-wrap {
+            min-height: min(48vh, 420px);
+            display: grid;
+            place-items: center;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background:
+                linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+            position: relative;
+            overflow: hidden;
+        }
+
+        .display-wrap::before {
+            content: "";
+            position: absolute;
+            inset: -40%;
+            background: radial-gradient(circle, rgba(121, 166, 255, 0.16), transparent 55%);
+            pointer-events: none;
+        }
+
+        .name {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            text-align: center;
+            font-size: clamp(3.2rem, 11vw, 8.2rem);
+            font-weight: 800;
+            letter-spacing: 0.07em;
+            color: #eef4ff;
+            text-shadow:
+                0 0 12px rgba(121, 166, 255, 0.45),
+                0 0 30px rgba(121, 166, 255, 0.22);
+            padding: 12px 18px;
+            line-height: 1.25;
+            white-space: pre-line;
+        }
+
+        .name.multi {
+            font-size: clamp(2rem, 6.8vw, 4.2rem);
+        }
+
+        .status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            color: var(--text-sub);
+            font-size: 0.95rem;
+        }
+
+        .status .ok {
+            color: var(--success);
+        }
+
+        .status .warn {
+            color: #ffd479;
+        }
+
+        @media (max-width: 640px) {
+            .panel {
+                border-radius: 18px;
+            }
+
+            .display-wrap {
+                min-height: 42vh;
+            }
+
+            button,
+            .file-btn {
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="app">
+        <section class="panel">
+            <header class="header">
+                <div>
+                    <h1 class="title">班级随机点名系统</h1>
+                    <div class="sub">默认读取同目录 <strong>名单.txt</strong>，每行一个姓名</div>
+                </div>
+                <div class="actions">
+                    <label class="file-btn" for="fileInput">手动选择TXT</label>
+                    <input id="fileInput" type="file" accept=".txt" />
+                    <label class="count-wrap" for="pickCount">
+                        抽取人数
+                        <input id="pickCount" type="number" min="1" step="1" value="1" />
+                    </label>
+                    <button id="reloadBtn" type="button">重新读取</button>
+                    <button id="startBtn" class="btn-start" type="button">开始抽取</button>
+                    <button id="stopBtn" class="btn-stop" type="button" disabled>结束抽取</button>
+                    <button id="speakBtn" type="button" disabled>朗读结果</button>
+                </div>
+            </header>
+
+            <div class="display-wrap">
+                <h2 id="nameDisplay" class="name">准备中</h2>
+            </div>
+
+            <div class="status">
+                <span id="statusText">正在读取名单…</span>
+                <span id="countText">人数：0</span>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const DEFAULT_FILE = "名单.txt";
+        const FLASH_INTERVAL = 50;
+
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const reloadBtn = document.getElementById("reloadBtn");
+        const fileInput = document.getElementById("fileInput");
+        const pickCountInput = document.getElementById("pickCount");
+        const speakBtn = document.getElementById("speakBtn");
+        const nameDisplay = document.getElementById("nameDisplay");
+        const statusText = document.getElementById("statusText");
+        const countText = document.getElementById("countText");
+
+        let names = [];
+        let allNames = [];
+        let currentGroup = [];
+        let lastResult = [];
+        let timer = null;
+
+        function decodeTextWithFallback(buffer) {
+            const bytes = new Uint8Array(buffer);
+
+            const stripBom = (text) => text.replace(/^\uFEFF/, "");
+
+            try {
+                const utf8Text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+                return { text: stripBom(utf8Text), encoding: "UTF-8" };
+            } catch (_) {
+                // UTF-8 解码失败时，回退到中文 Windows 常见编码
+            }
+
+            try {
+                const gbText = new TextDecoder("gb18030").decode(bytes);
+                return { text: stripBom(gbText), encoding: "GB18030" };
+            } catch (_) {
+                // 极少数环境可能不支持 gb18030
+            }
+
+            const fallbackText = new TextDecoder().decode(bytes);
+            return { text: stripBom(fallbackText), encoding: "默认编码" };
+        }
+
+        function parseNames(text) {
+            return text
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+        }
+
+        function updateStatus(msg, cls = "") {
+            statusText.textContent = msg;
+            statusText.className = cls;
+            countText.textContent = `剩余：${names.length} / 总计：${allNames.length}`;
+        }
+
+        function randomName() {
+            if (!names.length) return "名单为空";
+            const index = Math.floor(Math.random() * names.length);
+            return names[index];
+        }
+
+        function getPickCount() {
+            const raw = Number.parseInt(pickCountInput.value, 10);
+            if (!Number.isFinite(raw) || raw < 1) {
+                pickCountInput.value = "1";
+                return 1;
+            }
+
+            const count = Math.min(raw, Math.max(1, names.length));
+            if (String(count) !== pickCountInput.value) {
+                pickCountInput.value = String(count);
+            }
+            return count;
+        }
+
+        function randomGroup() {
+            if (!names.length) return ["名单为空"];
+
+            const count = getPickCount();
+            const pool = [...names];
+
+            for (let i = pool.length - 1; i > 0; i -= 1) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
+            }
+
+            return pool.slice(0, count);
+        }
+
+        function renderName(value) {
+            const list = Array.isArray(value) ? value : [value];
+            nameDisplay.classList.toggle("multi", list.length > 1);
+            nameDisplay.textContent = list.join("\n");
+        }
+
+        function removeSelectedFromNames(source, selected) {
+            const countMap = new Map();
+            for (const item of selected) {
+                countMap.set(item, (countMap.get(item) || 0) + 1);
+            }
+
+            return source.filter((item) => {
+                const left = countMap.get(item) || 0;
+                if (left > 0) {
+                    countMap.set(item, left - 1);
+                    return false;
+                }
+                return true;
+            });
+        }
+
+        function getChineseVoice() {
+            const voices = window.speechSynthesis?.getVoices?.() || [];
+            return voices.find((v) => /zh|cmn/i.test(v.lang || "")) || null;
+        }
+
+        function speakNames(list) {
+            if (!Array.isArray(list) || list.length === 0) {
+                updateStatus("暂无可朗读结果", "warn");
+                return;
+            }
+
+            if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance === "undefined") {
+                updateStatus("当前浏览器不支持语音朗读", "warn");
+                return;
+            }
+
+            const text = list.length === 1 ? ` ${list[0]}` : `${list.join("、")} `;
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voice = getChineseVoice();
+            if (voice) {
+                utterance.voice = voice;
+                utterance.lang = voice.lang;
+            } else {
+                utterance.lang = "zh-CN";
+            }
+            utterance.rate = 1;
+            utterance.pitch = 1;
+
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function stopRolling() {
+            if (timer) {
+                clearInterval(timer);
+                timer = null;
+            }
+            startBtn.disabled = names.length === 0;
+            stopBtn.disabled = true;
+        }
+
+        function startRolling() {
+            if (!names.length && allNames.length) {
+                names = [...allNames];
+                updateStatus("上一轮已抽完，已自动重置名单", "ok");
+            }
+
+            if (!names.length) {
+                updateStatus("名单为空，请先读取TXT文件", "warn");
+                return;
+            }
+
+            stopRolling();
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            updateStatus("抽取中…", "ok");
+
+            currentGroup = randomGroup();
+            renderName(currentGroup);
+
+            timer = setInterval(() => {
+                currentGroup = randomGroup();
+                renderName(currentGroup);
+            }, FLASH_INTERVAL);
+        }
+
+        async function loadFromSameFolder() {
+            try {
+                const response = await fetch(encodeURIComponent(DEFAULT_FILE));
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                const buffer = await response.arrayBuffer();
+                const { text, encoding } = decodeTextWithFallback(buffer);
+                allNames = parseNames(text);
+                names = [...allNames];
+                currentGroup = [];
+                lastResult = [];
+                speakBtn.disabled = true;
+
+                if (!names.length) {
+                    renderName("名单为空");
+                    updateStatus("已读取名单，但内容为空", "warn");
+                    startBtn.disabled = true;
+                    return;
+                }
+
+                renderName("点击开始抽取");
+                updateStatus(`已读取 ${DEFAULT_FILE}（${encoding}）`, "ok");
+                startBtn.disabled = false;
+            } catch (err) {
+                names = [];
+                allNames = [];
+                currentGroup = [];
+                lastResult = [];
+                speakBtn.disabled = true;
+                renderName("请导入名单");
+                startBtn.disabled = true;
+                updateStatus(
+                    `自动读取失败（${DEFAULT_FILE}）。可点击“手动选择TXT”导入。`,
+                    "warn"
+                );
+            }
+        }
+
+        async function loadFromFile(file) {
+            const buffer = await file.arrayBuffer();
+            const { text, encoding } = decodeTextWithFallback(buffer);
+            allNames = parseNames(text);
+            names = [...allNames];
+            currentGroup = [];
+            lastResult = [];
+            speakBtn.disabled = true;
+            stopRolling();
+
+            if (!names.length) {
+                renderName("名单为空");
+                updateStatus("读取成功，但TXT中没有有效姓名", "warn");
+                return;
+            }
+
+            renderName("点击开始抽取");
+            updateStatus(`已导入：${file.name}（${encoding}）`, "ok");
+            startBtn.disabled = false;
+        }
+
+        startBtn.addEventListener("click", startRolling);
+
+        pickCountInput.addEventListener("change", () => {
+            if (!names.length) {
+                pickCountInput.value = "1";
+                return;
+            }
+            getPickCount();
+        });
+
+        stopBtn.addEventListener("click", () => {
+            stopRolling();
+
+            lastResult = [...currentGroup];
+            speakBtn.disabled = lastResult.length === 0;
+
+            if (currentGroup.length) {
+                names = removeSelectedFromNames(names, currentGroup);
+            }
+
+            if (!names.length && allNames.length) {
+                updateStatus("抽取结束，本轮已全部抽完。下次开始将自动重置", "ok");
+            } else {
+                updateStatus("抽取结束（已去重）", "ok");
+            }
+
+            speakNames(lastResult);
+        });
+
+        speakBtn.addEventListener("click", () => {
+            speakNames(lastResult);
+        });
+
+        if ("speechSynthesis" in window) {
+            window.speechSynthesis.onvoiceschanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+        }
+
+        reloadBtn.addEventListener("click", async () => {
+            stopRolling();
+            updateStatus("正在重新读取名单…");
+            await loadFromSameFolder();
+        });
+
+        fileInput.addEventListener("change", async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            await loadFromFile(file);
+            fileInput.value = "";
+        });
+
+        loadFromSameFolder();
+    </script>
+</body>
+
+</html>
